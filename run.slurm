@@ -1,10 +1,9 @@
 #!/usr/bin/bash
-#SBATCH --partition=EPIC2
+#SBATCH --partition=EPT
 #SBATCH --time=00:30:00
-#SBATCH --nodes=1
-#SBATCH --ntasks-per-node=24
+#SBATCH --nodes=2
+#SBATCH --ntasks-per-node=20
 #SBATCH --cpus-per-task=1
-#SBATCH --gres=gpu:2
 #SBATCH --job-name="pingpong"
 #SBATCH --output=PingPong.%j.out
 
