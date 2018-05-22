@@ -3,6 +3,9 @@
 #include <string.h>
 #include <mpi.h>
 #include <unistd.h>
+#include <sched.h>
+
+#define _GNU_SOURCE
 
 // 10000 tests of 1 byte transfers for latency estimate
 #define TS_TESTS 10000
@@ -133,6 +136,21 @@ void all_print_hostname() {
   }
 }
 
+void all_print_cpu() {
+  unsigned cpu = sched_getcpu();
+  // getcpu(&cpu[0], &cpu[1], NULL);
+  if (rank == 0) {
+    printf("%02d %02u\n", rank, cpu);
+    unsigned remote_cpunode;
+    for (int r = 1; r < size; ++r) {
+      MPI_Recv(&remote_cpunode, 1, MPI_UNSIGNED, r, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      printf("%02d %02u\n", r, remote_cpunode);
+    }
+  } else {
+    MPI_Send(&cpu, 1, MPI_UNSIGNED, 0, 0, MPI_COMM_WORLD);
+  }
+}
+
 
 int
 main ( int argc, char **argv )
@@ -142,6 +160,7 @@ main ( int argc, char **argv )
     MPI_Comm_rank ( MPI_COMM_WORLD, &rank );
 
     all_print_hostname();
+    all_print_cpu();
 
     if ( (size&1) )
     {
