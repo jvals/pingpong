@@ -1,5 +1,5 @@
 CC=mpiicc
-CFLAGS=-std=c99
+CFLAGS=-std=gnu99
 TARGETS=pingpong
 all: ${TARGETS}
 clean:

@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <mpi.h>
+#include <unistd.h>
 
 // 10000 tests of 1 byte transfers for latency estimate
 #define TS_TESTS 10000
@@ -56,12 +57,30 @@ time_pingpong ( int rank, int peer, int n_tests, int msg_size )
 }
 
 
+void all_print_hostname() {
+  char hostname[256];
+  gethostname(hostname, 256);
+  if (rank == 0) {
+    printf("%02d %s\n", rank, hostname);
+    char remote_hostname[256];
+    for (int r = 1; r < size; ++r) {
+      MPI_Recv(remote_hostname, 256, MPI_CHAR, r, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      printf("%02d %s\n", r, remote_hostname);
+    }
+  } else {
+    MPI_Send(hostname, 256, MPI_CHAR, 0, 0, MPI_COMM_WORLD);
+  }
+}
+
+
 int
 main ( int argc, char **argv )
 {
     MPI_Init ( &argc, &argv );
     MPI_Comm_size ( MPI_COMM_WORLD, &size );
     MPI_Comm_rank ( MPI_COMM_WORLD, &rank );
+
+    all_print_hostname();
 
     if ( (size&1) )
     {
@@ -82,13 +101,13 @@ main ( int argc, char **argv )
     // time large number of small messages, messaging overhead cost
     // dominates total time requirement
     Ts = time_pingpong ( rank, peer, TS_TESTS, 1 );
-    printf ( "(%d <-> %d) Ts =~ %e [s]\n", rank, peer, Ts );
+    printf ( "(%02d <-> %02d) Ts =~ %e [s]\n", rank, peer, Ts );
 
     // Measure bandwidth:
     // time small number of large messages, data transfer cost
     // dominates total time requirement
     beta_inv = time_pingpong ( rank, peer, BETA_TESTS, MSG_SIZE );
-    printf ( "(%d <-> %d) b^-1 =~ %e [s/byte]\n", rank, peer, beta_inv );
+    printf ( "(%02d <-> %02d) b^-1 =~ %e [s/byte]\n", rank, peer, beta_inv );
 
     MPI_Finalize ();
     free ( message );
