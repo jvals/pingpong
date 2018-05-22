@@ -29,12 +29,12 @@ char *message;
  * n_tests is number of repetitions, msg_size is data transfer per rep.
  */
 double
-time_pingpong ( int rank, int peer, int n_tests, int msg_size )
+time_pingpong ( int source, int peer, int n_tests, int msg_size, MPI_Comm pair_comm )
 {
     double start, end;
-    MPI_Barrier ( MPI_COMM_WORLD );
+    MPI_Barrier ( pair_comm );
     start = MPI_Wtime();
-    if ( (rank&1) )
+    if ( source == rank )
     {
         for ( int i=0; i<n_tests; i++ )
             MPI_Ssend ( message, msg_size, MPI_CHAR, peer, 0, MPI_COMM_WORLD );
@@ -43,17 +43,78 @@ time_pingpong ( int rank, int peer, int n_tests, int msg_size )
                 peer, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE
             );
     }
-    else
+    else if ( peer == rank )
     {
         for ( int i=0; i<n_tests; i++ )
             MPI_Recv ( message, msg_size, MPI_CHAR,
-                peer, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE
+                source, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE
             );
         for ( int i=0; i<n_tests; i++ )
-            MPI_Ssend ( message, msg_size, MPI_CHAR, peer, 0, MPI_COMM_WORLD );
+            MPI_Ssend ( message, msg_size, MPI_CHAR, source, 0, MPI_COMM_WORLD );
     }
     end = MPI_Wtime();
     return (end-start)/(2.0*n_tests*msg_size);
+}
+
+void all_to_all_pingpong() {
+  // For alle i, i = [0 .. N-1]
+  // for alle j, j = [i+1 .. N]
+  // i kjører pingpong mellom i og j
+  // lagre resultatet
+  // barriere
+  // samle alt til slutt
+
+  MPI_Group world_group;
+  MPI_Comm_group(MPI_COMM_WORLD, &world_group);
+
+  double* timestamps = (double*)calloc(size*size, sizeof(double));
+  for (int i = 0; i < size-1; ++i) {
+    for (int j = i+1; j < size; ++j) {
+
+      if (rank == i || rank == j) {
+        // Create custom communicator for i,j pair
+        MPI_Group pair_group;
+        const int pair_ranks[2] = {i, j};
+        MPI_Group_incl(world_group, 2, pair_ranks, &pair_group);
+        MPI_Comm pair_comm;
+        MPI_Comm_create_group((MPI_COMM_WORLD), pair_group, 0, &pair_comm);
+        if (MPI_COMM_NULL == pair_comm) {
+          fprintf(stderr, "pair_comm was null\n");
+          exit(1);
+        }
+
+        if (rank == i) {
+          timestamps[i*size+j] = time_pingpong(i, j, TS_TESTS, 1, pair_comm);
+        } else if (rank == j) {
+          timestamps[j*size+i] = time_pingpong(i, j, TS_TESTS, 1, pair_comm);
+        }
+
+        MPI_Group_free(&pair_group);
+        MPI_Comm_free(&pair_comm);
+      }
+    }
+  }
+
+  if (rank == 0) {
+    for (int r = 1; r < size; ++r) {
+      MPI_Recv(&timestamps[r*size], size, MPI_DOUBLE, r, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    }
+  } else {
+    MPI_Send(&timestamps[rank*size], size, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
+  }
+
+  if (rank == 0) {
+    for (int i = 0; i < size; ++i) {
+      for (int j = 0; j < size; ++j) {
+        printf("%e ", timestamps[i*size+j]);
+      }
+      printf("\n");
+    }
+  }
+
+
+  MPI_Group_free(&world_group);
+  free(timestamps);
 }
 
 
@@ -100,14 +161,15 @@ main ( int argc, char **argv )
     // Measure latency:
     // time large number of small messages, messaging overhead cost
     // dominates total time requirement
-    Ts = time_pingpong ( rank, peer, TS_TESTS, 1 );
-    printf ( "(%02d <-> %02d) Ts =~ %e [s]\n", rank, peer, Ts );
+    // Ts = time_pingpong ( rank, peer, TS_TESTS, 1 );
+    // printf ( "(%02d <-> %02d) Ts =~ %e [s]\n", rank, peer, Ts );
 
     // Measure bandwidth:
     // time small number of large messages, data transfer cost
     // dominates total time requirement
-    beta_inv = time_pingpong ( rank, peer, BETA_TESTS, MSG_SIZE );
-    printf ( "(%02d <-> %02d) b^-1 =~ %e [s/byte]\n", rank, peer, beta_inv );
+    // beta_inv = time_pingpong ( rank, peer, BETA_TESTS, MSG_SIZE );
+    // printf ( "(%02d <-> %02d) b^-1 =~ %e [s/byte]\n", rank, peer, beta_inv );
+    all_to_all_pingpong();
 
     MPI_Finalize ();
     free ( message );
