@@ -111,20 +111,16 @@ void all_to_all_pingpong() {
     }
   }
 
+  // Collect timestamps on rank 0
   if (rank == 0) {
-    double rank0data[size];
-    memcpy(rank0data, &timestamps[0], size*sizeof(double));
-    for (int r = 0; r < size; ++r) {
-      int remote_rank = cpuinfos[r].rank;
-      if (remote_rank != 0)
-        MPI_Recv(&timestamps[r*size], size, MPI_DOUBLE, remote_rank, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      else
-        memcpy(&timestamps[r*size], rank0data, size*sizeof(double));
+    for (int r = 1; r < size; ++r) {
+        MPI_Recv(&timestamps[r*size], size, MPI_DOUBLE, r, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     }
   } else {
     MPI_Send(&timestamps[rank*size], size, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
   }
 
+  // Print header row
   if (rank == 0) {
     printf("xx;");
     for (int r = 0; r < size; ++r) {
@@ -135,9 +131,10 @@ void all_to_all_pingpong() {
 
   if (rank == 0) {
     for (int i = 0; i < size; ++i) {
+      // First column
       printf("%02d;", cpuinfos[i].rank);
       for (int j = 0; j < size; ++j) {
-        printf("%e;", timestamps[i*size+cpuinfos[j].rank]);
+        printf("%e;", timestamps[cpuinfos[i].rank*size+cpuinfos[j].rank]);
       }
       printf("\n");
     }
