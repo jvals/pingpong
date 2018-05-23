@@ -125,19 +125,30 @@ void all_to_all_pingpong() {
   }
 
   // Reorder rows
-  for (int i = 0; i < size; ++i) {
-    double temp[size];
-    for (int j = 0; j < size; ++j) {
-      int r = cpuinfos[j].rank;
-      temp[r] = timestamps[i*size+j];
+  if (rank == 0) {
+    for (int i = 0; i < size; ++i) {
+      double temp[size];
+      for (int j = 0; j < size; ++j) {
+        int r = cpuinfos[j].rank;
+        temp[r] = timestamps[i*size+j];
+      }
+      memcpy(&timestamps[i*size], temp, size*sizeof(double));
     }
-    memcpy(&timestamps[i*size], temp, size*sizeof(double));
+  }
+
+  if (rank == 0) {
+    printf("xx;");
+    for (int r = 0; r < size; ++r) {
+      printf("%02d;", cpuinfos[r].rank);
+    }
+    printf("\n");
   }
 
   if (rank == 0) {
     for (int i = 0; i < size; ++i) {
+      printf("%02d;", cpuinfos[i].rank);
       for (int j = 0; j < size; ++j) {
-        printf("%e ", timestamps[i*size+j]);
+        printf("%e;", timestamps[i*size+j]);
       }
       printf("\n");
     }
