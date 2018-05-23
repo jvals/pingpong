@@ -20,7 +20,7 @@ int size, rank;
 
 typedef struct CPUINFO {
   unsigned core;
-  unsigned node;
+  unsigned numa;
   int rank;
 } Cpuinfo;
 
@@ -164,7 +164,7 @@ void all_print_hostname() {
 }
 
 void collect_CPU_info() {
-  syscall(SYS_getcpu, &cpuinfo.core, &cpuinfo.node, NULL);
+  syscall(SYS_getcpu, &cpuinfo.core, &cpuinfo.numa, NULL);
   if (rank == 0) {
     cpuinfos[0] = cpuinfo;
     for (int r = 1; r < size; ++r) {
@@ -177,14 +177,14 @@ void collect_CPU_info() {
 
 void print_CPU_info() {
   for (int r = 0; r < size; ++r) {
-    printf("RANK:%02d CPU:%02u NODE:%02u\n", cpuinfos[r].rank, cpuinfos[r].core, cpuinfos[r].node);
+    printf("RANK:%02d CPU:%02u NUMA:%02u\n", cpuinfos[r].rank, cpuinfos[r].core, cpuinfos[r].numa);
   }
 }
 
 void bubble_sort(Cpuinfo* cpuinfos, int n) {
   for (int i = 0; i < n-1; ++i) {
     for (int j = 0; j < n-i-1; ++j) {
-      if (cpuinfos[j].node > cpuinfos[j+1].node) {
+      if (cpuinfos[j].numa > cpuinfos[j+1].numa) {
         Cpuinfo temp = cpuinfos[j];
         cpuinfos[j] = cpuinfos[j+1];
         cpuinfos[j+1] = temp;
@@ -215,7 +215,7 @@ main ( int argc, char **argv )
       bubble_sort(cpuinfos, size);
       printf("\n");
       for (int r = 0; r < size; ++r) {
-        printf("RANK:%02d CPU:%02u NODE:%02u\n", cpuinfos[r].rank, cpuinfos[r].core, cpuinfos[r].node);
+        printf("RANK:%02d CPU:%02u NUMA:%02u\n", cpuinfos[r].rank, cpuinfos[r].core, cpuinfos[r].numa);
       }
 
     }
