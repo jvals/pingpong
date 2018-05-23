@@ -148,17 +148,21 @@ void all_print_hostname() {
   }
 }
 
-void all_print_cpunode() {
+void collect_CPU_info() {
   syscall(SYS_getcpu, &cpuinfo.core, &cpuinfo.node, NULL);
   if (rank == 0) {
-    printf("RANK:%02d CPU:%02u NODE:%02u\n", rank, cpuinfo.core, cpuinfo.node);
     remote_cpuinfos[0] = cpuinfo;
     for (int r = 1; r < size; ++r) {
       MPI_Recv(&remote_cpuinfos[r], sizeof(cpuinfo), MPI_BYTE, r, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      printf("RANK:%02d CPU:%02u NODE:%02u\n", remote_cpuinfos[r].rank, remote_cpuinfos[r].core, remote_cpuinfos[r].node);
     }
   } else {
     MPI_Send(&cpuinfo, sizeof(cpuinfo), MPI_BYTE, 0, 0, MPI_COMM_WORLD);
+  }
+}
+
+void print_CPU_info() {
+  for (int r = 0; r < size; ++r) {
+    printf("RANK:%02d CPU:%02u NODE:%02u\n", remote_cpuinfos[r].rank, remote_cpuinfos[r].core, remote_cpuinfos[r].node);
   }
 }
 
@@ -187,7 +191,9 @@ main ( int argc, char **argv )
     }
 
     all_print_hostname();
-    all_print_cpunode();
+    collect_CPU_info();
+
+    if (rank == 0) print_CPU_info();
 
     if (rank == 0) {
       // Sort the remote_cpuinfos array by numa node
