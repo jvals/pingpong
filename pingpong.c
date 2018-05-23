@@ -204,6 +204,11 @@ main ( int argc, char **argv )
     if (rank == 0) {
       // Sort the cpuinfos array by numa node
       bubble_sort(cpuinfos, size);
+      printf("\n");
+      for (int r = 0; r < size; ++r) {
+        printf("RANK:%02d CPU:%02u NODE:%02u\n", cpuinfos[r].rank, cpuinfos[r].core, cpuinfos[r].node);
+      }
+
     }
 
     if ( (size&1) )
