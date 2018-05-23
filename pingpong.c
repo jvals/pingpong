@@ -73,20 +73,15 @@ time_pingpong ( int source, int peer, int n_tests, int msg_size, MPI_Comm pair_c
 }
 
 void all_to_all_pingpong() {
-  // For alle i, i = [0 .. N-1]
-  // for alle j, j = [i+1 .. N]
-  // i kjører pingpong mellom i og j
-  // lagre resultatet
-  // barriere
-  // samle alt til slutt
-
+  // Create mpi group from comm_world
   MPI_Group world_group;
   MPI_Comm_group(MPI_COMM_WORLD, &world_group);
 
+  // Run latency tests
   double* timestamps = (double*)calloc(size*size, sizeof(double));
   for (int i = 0; i < size-1; ++i) {
     for (int j = i+1; j < size; ++j) {
-
+      // Rank i and j are the candidates
       if (rank == i || rank == j) {
         // Create custom communicator for i,j pair
         MPI_Group pair_group;
@@ -94,11 +89,13 @@ void all_to_all_pingpong() {
         MPI_Group_incl(world_group, 2, pair_ranks, &pair_group);
         MPI_Comm pair_comm;
         MPI_Comm_create_group((MPI_COMM_WORLD), pair_group, 0, &pair_comm);
+        // Assert that the communicator is not null
         if (MPI_COMM_NULL == pair_comm) {
           fprintf(stderr, "pair_comm was null\n");
           exit(1);
         }
 
+        // i and j runs the benchmark
         if (rank == i) {
           timestamps[i*size+j] = time_pingpong(i, j, TS_TESTS, 1, pair_comm);
         } else if (rank == j) {
@@ -129,17 +126,20 @@ void all_to_all_pingpong() {
     printf("\n");
   }
 
+  // Print timestamps. timestamps sharing node is grouped together,
+  // and within that group, timestamps sharing sockets are grouped
+  // together
   if (rank == 0) {
     for (int i = 0; i < size; ++i) {
       // First column
       printf("%02d;", cpuinfos[i].rank);
       for (int j = 0; j < size; ++j) {
+        // cpuinfo[i].rank is used for node/socket grouping.
         printf("%e;", timestamps[cpuinfos[i].rank*size+cpuinfos[j].rank]);
       }
       printf("\n");
     }
   }
-
 
   MPI_Group_free(&world_group);
   free(timestamps);
@@ -160,7 +160,7 @@ void all_print_hostname() {
     MPI_Send(hostname, 256, MPI_CHAR, 0, 0, MPI_COMM_WORLD);
   }
 
-  // Extract node number from hostname
+  // Extract node number xx from hostname of the form 'compute-a{1,2}-b{1,2}-x{1,2}.'
   int dashes = 0;
   int t = 0;
   char match[2];
@@ -168,6 +168,7 @@ void all_print_hostname() {
     if (hostname[i] == '-') {
       dashes++;
     } else if (dashes == 3 && hostname[i] >= 48 && hostname[i] <= 57) {
+      // If we have three dashes and hostname[i] is a digit:
       match[t++] = hostname[i];
     }
     if (hostname[i] == '.') {
@@ -197,7 +198,8 @@ void print_CPU_info() {
   }
 }
 
-void bubble_sort(Cpuinfo* cpuinfos, int n) {
+void bubble_sort_cpuinfos(Cpuinfo* cpuinfos, int n) {
+  // Sort numa
   for (int i = 0; i < n-1; ++i) {
     for (int j = 0; j < n-i-1; ++j) {
       if (cpuinfos[j].numa > cpuinfos[j+1].numa) {
@@ -208,6 +210,7 @@ void bubble_sort(Cpuinfo* cpuinfos, int n) {
     }
   }
 
+  // Sort node
   for (int i = 0; i < n-1; ++i) {
     for (int j = 0; j < n-i-1; ++j) {
       if (cpuinfos[j].node > cpuinfos[j+1].node) {
@@ -237,13 +240,12 @@ main ( int argc, char **argv )
     if (rank == 0) print_CPU_info();
 
     if (rank == 0) {
-      // Sort the cpuinfos array by numa node
-      bubble_sort(cpuinfos, size);
+      // Sort the cpuinfos array by socket and then by node.
+      bubble_sort_cpuinfos(cpuinfos, size);
       printf("\n");
       for (int r = 0; r < size; ++r) {
         printf("RANK:%02d CPU:%02u NUMA:%02u NODE:%02d\n", cpuinfos[r].rank, cpuinfos[r].core, cpuinfos[r].numa, cpuinfos[r].node);
       }
-
     }
 
     if ( (size&1) )
@@ -272,6 +274,7 @@ main ( int argc, char **argv )
     // dominates total time requirement
     // beta_inv = time_pingpong ( rank, peer, BETA_TESTS, MSG_SIZE );
     // printf ( "(%02d <-> %02d) b^-1 =~ %e [s/byte]\n", rank, peer, beta_inv );
+
     all_to_all_pingpong();
 
     if (rank == 0) {
