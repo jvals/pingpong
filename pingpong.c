@@ -145,17 +145,16 @@ void all_print_hostname() {
 }
 
 void all_print_cpunode() {
-  unsigned cpunode[2] = {0, 0};
-  syscall(SYS_getcpu, &cpunode[0], &cpunode[1], NULL);
+  syscall(SYS_getcpu, &cpuinfo.core, &cpuinfo.node, NULL);
   if (rank == 0) {
-    printf("RANK:%02d CPU:%02u NODE:%02u\n", rank, cpunode[0], cpunode[1]);
-    unsigned remote_cpunode[2] = {0, 0};
+    printf("RANK:%02d CPU:%02u NODE:%02u\n", rank, cpuinfo.core, cpuinfo.node);
+    struct CPUINFO remote_cpuinfo;
     for (int r = 1; r < size; ++r) {
-      MPI_Recv(&remote_cpunode, 2, MPI_UNSIGNED, r, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      printf("RANK:%02d CPU:%02u NODE:%02u\n", r, remote_cpunode[0], remote_cpunode[1]);
+      MPI_Recv(&remote_cpuinfo, sizeof(cpuinfo), MPI_BYTE, r, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      printf("RANK:%02d CPU:%02u NODE:%02u\n", remote_cpuinfo.rank, remote_cpuinfo.core, remote_cpuinfo.node);
     }
   } else {
-    MPI_Send(&cpunode, 2, MPI_UNSIGNED, 0, 0, MPI_COMM_WORLD);
+    MPI_Send(&cpuinfo, sizeof(cpuinfo), MPI_BYTE, 0, 0, MPI_COMM_WORLD);
   }
 }
 
