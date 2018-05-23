@@ -18,6 +18,12 @@
 
 int size, rank;
 
+struct CPUINFO {
+  unsigned core;
+  unsigned node;
+  int rank;
+} cpuinfo;
+
 // Hockney model: T(n) = Ts + n * beta_inv
 // T(n) is estimated transfer time for message of n bytes
 // Ts is link latency in seconds
@@ -160,6 +166,8 @@ main ( int argc, char **argv )
     MPI_Init ( &argc, &argv );
     MPI_Comm_size ( MPI_COMM_WORLD, &size );
     MPI_Comm_rank ( MPI_COMM_WORLD, &rank );
+
+    cpuinfo.rank = rank;
 
     all_print_hostname();
     all_print_cpunode();
