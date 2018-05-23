@@ -140,7 +140,6 @@ void all_print_hostname() {
 
 void all_print_cpu() {
   unsigned cpu = sched_getcpu();
-  // getcpu(&cpu[0], &cpu[1], NULL);
   if (rank == 0) {
     printf("%02d %02u\n", rank, cpu);
     unsigned remote_cpunode;
@@ -155,7 +154,6 @@ void all_print_cpu() {
 
 void all_print_cpunode() {
   unsigned cpunode[2] = {0, 0};
-  // getcpu(&cpunode[0], &cpunode[1], NULL);
   syscall(SYS_getcpu, &cpunode[0], &cpunode[1], NULL);
   if (rank == 0) {
     printf("RANK:%02d CPU:%02u NODE:%02u\n", rank, cpunode[0], cpunode[1]);
