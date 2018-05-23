@@ -138,20 +138,6 @@ void all_print_hostname() {
   }
 }
 
-void all_print_cpu() {
-  unsigned cpu = sched_getcpu();
-  if (rank == 0) {
-    printf("%02d %02u\n", rank, cpu);
-    unsigned remote_cpunode;
-    for (int r = 1; r < size; ++r) {
-      MPI_Recv(&remote_cpunode, 1, MPI_UNSIGNED, r, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      printf("%02d %02u\n", r, remote_cpunode);
-    }
-  } else {
-    MPI_Send(&cpu, 1, MPI_UNSIGNED, 0, 0, MPI_COMM_WORLD);
-  }
-}
-
 void all_print_cpunode() {
   unsigned cpunode[2] = {0, 0};
   syscall(SYS_getcpu, &cpunode[0], &cpunode[1], NULL);
