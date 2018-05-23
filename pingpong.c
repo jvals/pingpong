@@ -22,7 +22,7 @@ typedef struct CPUINFO {
   unsigned core;
   unsigned numa;
   int rank;
-  char node[2];
+  int node;
 } Cpuinfo;
 
 Cpuinfo cpuinfo;
@@ -178,8 +178,7 @@ void all_print_hostname() {
     }
   }
 
-  cpuinfo.node[0] = match[0];
-  cpuinfo.node[1] = match[1];
+  cpuinfo.node = atoi(match);
 
 }
 
@@ -197,7 +196,7 @@ void collect_CPU_info() {
 
 void print_CPU_info() {
   for (int r = 0; r < size; ++r) {
-    printf("RANK:%02d CPU:%02u NUMA:%02u\n", cpuinfos[r].rank, cpuinfos[r].core, cpuinfos[r].numa);
+    printf("RANK:%02d CPU:%02u NUMA:%02u NODE:%02d\n", cpuinfos[r].rank, cpuinfos[r].core, cpuinfos[r].numa, cpuinfos[r].node);
   }
 }
 
@@ -205,6 +204,16 @@ void bubble_sort(Cpuinfo* cpuinfos, int n) {
   for (int i = 0; i < n-1; ++i) {
     for (int j = 0; j < n-i-1; ++j) {
       if (cpuinfos[j].numa > cpuinfos[j+1].numa) {
+        Cpuinfo temp = cpuinfos[j];
+        cpuinfos[j] = cpuinfos[j+1];
+        cpuinfos[j+1] = temp;
+      }
+    }
+  }
+
+  for (int i = 0; i < n-1; ++i) {
+    for (int j = 0; j < n-i-1; ++j) {
+      if (cpuinfos[j].node > cpuinfos[j+1].node) {
         Cpuinfo temp = cpuinfos[j];
         cpuinfos[j] = cpuinfos[j+1];
         cpuinfos[j+1] = temp;
@@ -235,7 +244,7 @@ main ( int argc, char **argv )
       bubble_sort(cpuinfos, size);
       printf("\n");
       for (int r = 0; r < size; ++r) {
-        printf("RANK:%02d CPU:%02u NUMA:%02u\n", cpuinfos[r].rank, cpuinfos[r].core, cpuinfos[r].numa);
+        printf("RANK:%02d CPU:%02u NUMA:%02u NODE:%02d\n", cpuinfos[r].rank, cpuinfos[r].core, cpuinfos[r].numa, cpuinfos[r].node);
       }
 
     }
