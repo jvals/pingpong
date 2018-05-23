@@ -22,6 +22,7 @@ typedef struct CPUINFO {
   unsigned core;
   unsigned numa;
   int rank;
+  char node[2];
 } Cpuinfo;
 
 Cpuinfo cpuinfo;
@@ -161,6 +162,25 @@ void all_print_hostname() {
   } else {
     MPI_Send(hostname, 256, MPI_CHAR, 0, 0, MPI_COMM_WORLD);
   }
+
+  // Extract node number from hostname
+  int dashes = 0;
+  int t = 0;
+  char match[2];
+  for (int i = 0; i < 256; ++i) {
+    if (hostname[i] == '-') {
+      dashes++;
+    } else if (dashes == 3 && hostname[i] >= 48 && hostname[i] <= 57) {
+      match[t++] = hostname[i];
+    }
+    if (hostname[i] == '.') {
+      break;
+    }
+  }
+
+  cpuinfo.node[0] = match[0];
+  cpuinfo.node[1] = match[1];
+
 }
 
 void collect_CPU_info() {
