@@ -18,11 +18,15 @@
 
 int size, rank;
 
-struct CPUINFO {
+typedef struct CPUINFO {
   unsigned core;
   unsigned node;
   int rank;
-} cpuinfo;
+} Cpuinfo;
+
+Cpuinfo cpuinfo;
+Cpuinfo* remote_cpuinfos;
+
 
 // Hockney model: T(n) = Ts + n * beta_inv
 // T(n) is estimated transfer time for message of n bytes
@@ -148,10 +152,9 @@ void all_print_cpunode() {
   syscall(SYS_getcpu, &cpuinfo.core, &cpuinfo.node, NULL);
   if (rank == 0) {
     printf("RANK:%02d CPU:%02u NODE:%02u\n", rank, cpuinfo.core, cpuinfo.node);
-    struct CPUINFO remote_cpuinfo;
     for (int r = 1; r < size; ++r) {
-      MPI_Recv(&remote_cpuinfo, sizeof(cpuinfo), MPI_BYTE, r, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      printf("RANK:%02d CPU:%02u NODE:%02u\n", remote_cpuinfo.rank, remote_cpuinfo.core, remote_cpuinfo.node);
+      MPI_Recv(&remote_cpuinfos[r], sizeof(cpuinfo), MPI_BYTE, r, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      printf("RANK:%02d CPU:%02u NODE:%02u\n", remote_cpuinfos[r].rank, remote_cpuinfos[r].core, remote_cpuinfos[r].node);
     }
   } else {
     MPI_Send(&cpuinfo, sizeof(cpuinfo), MPI_BYTE, 0, 0, MPI_COMM_WORLD);
@@ -167,6 +170,9 @@ main ( int argc, char **argv )
     MPI_Comm_rank ( MPI_COMM_WORLD, &rank );
 
     cpuinfo.rank = rank;
+    if (rank == 0) {
+      remote_cpuinfos = (Cpuinfo*)malloc(sizeof(cpuinfo)*size);
+    }
 
     all_print_hostname();
     all_print_cpunode();
@@ -198,6 +204,10 @@ main ( int argc, char **argv )
     // beta_inv = time_pingpong ( rank, peer, BETA_TESTS, MSG_SIZE );
     // printf ( "(%02d <-> %02d) b^-1 =~ %e [s/byte]\n", rank, peer, beta_inv );
     all_to_all_pingpong();
+
+    if (rank == 0) {
+      free(remote_cpuinfos);
+    }
 
     MPI_Finalize ();
     free ( message );
