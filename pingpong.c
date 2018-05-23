@@ -124,6 +124,16 @@ void all_to_all_pingpong() {
     MPI_Send(&timestamps[rank*size], size, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
   }
 
+  // Reorder rows
+  for (int i = 0; i < size; ++i) {
+    double temp[size];
+    for (int j = 0; j < size; ++j) {
+      int r = cpuinfos[j].rank;
+      temp[r] = timestamps[i*size+j];
+    }
+    memcpy(&timestamps[i*size], temp, size*sizeof(double));
+  }
+
   if (rank == 0) {
     for (int i = 0; i < size; ++i) {
       for (int j = 0; j < size; ++j) {
