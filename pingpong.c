@@ -111,10 +111,14 @@ void all_to_all_pingpong() {
   }
 
   if (rank == 0) {
+    double rank0data[size];
+    memcpy(rank0data, &timestamps[0], size*sizeof(double));
     for (int r = 0; r < size; ++r) {
       int remote_rank = cpuinfos[r].rank;
       if (remote_rank != 0)
-        MPI_Recv(&timestamps[remote_rank*size], size, MPI_DOUBLE, remote_rank, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Recv(&timestamps[r*size], size, MPI_DOUBLE, remote_rank, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      else
+        memcpy(&timestamps[r*size], rank0data, size*sizeof(double));
     }
   } else {
     MPI_Send(&timestamps[rank*size], size, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
