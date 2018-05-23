@@ -25,7 +25,7 @@ typedef struct CPUINFO {
 } Cpuinfo;
 
 Cpuinfo cpuinfo;
-Cpuinfo* remote_cpuinfos;
+Cpuinfo* cpuinfos;
 
 
 // Hockney model: T(n) = Ts + n * beta_inv
@@ -151,9 +151,9 @@ void all_print_hostname() {
 void collect_CPU_info() {
   syscall(SYS_getcpu, &cpuinfo.core, &cpuinfo.node, NULL);
   if (rank == 0) {
-    remote_cpuinfos[0] = cpuinfo;
+    cpuinfos[0] = cpuinfo;
     for (int r = 1; r < size; ++r) {
-      MPI_Recv(&remote_cpuinfos[r], sizeof(cpuinfo), MPI_BYTE, r, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      MPI_Recv(&cpuinfos[r], sizeof(cpuinfo), MPI_BYTE, r, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     }
   } else {
     MPI_Send(&cpuinfo, sizeof(cpuinfo), MPI_BYTE, 0, 0, MPI_COMM_WORLD);
@@ -162,7 +162,7 @@ void collect_CPU_info() {
 
 void print_CPU_info() {
   for (int r = 0; r < size; ++r) {
-    printf("RANK:%02d CPU:%02u NODE:%02u\n", remote_cpuinfos[r].rank, remote_cpuinfos[r].core, remote_cpuinfos[r].node);
+    printf("RANK:%02d CPU:%02u NODE:%02u\n", cpuinfos[r].rank, cpuinfos[r].core, cpuinfos[r].node);
   }
 }
 
@@ -187,7 +187,7 @@ main ( int argc, char **argv )
 
     cpuinfo.rank = rank;
     if (rank == 0) {
-      remote_cpuinfos = (Cpuinfo*)malloc(sizeof(cpuinfo)*size);
+      cpuinfos = (Cpuinfo*)malloc(sizeof(cpuinfo)*size);
     }
 
     all_print_hostname();
@@ -196,8 +196,8 @@ main ( int argc, char **argv )
     if (rank == 0) print_CPU_info();
 
     if (rank == 0) {
-      // Sort the remote_cpuinfos array by numa node
-      bubble_sort(remote_cpuinfos, size);
+      // Sort the cpuinfos array by numa node
+      bubble_sort(cpuinfos, size);
     }
 
     if ( (size&1) )
@@ -229,7 +229,7 @@ main ( int argc, char **argv )
     all_to_all_pingpong();
 
     if (rank == 0) {
-      free(remote_cpuinfos);
+      free(cpuinfos);
     }
 
     MPI_Finalize ();
