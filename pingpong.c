@@ -171,8 +171,8 @@ void bubble_sort(Cpuinfo* cpuinfos, int n) {
     for (int j = 0; j < n-i-1; ++j) {
       if (cpuinfos[j].node > cpuinfos[j+1].node) {
         Cpuinfo temp = cpuinfos[j];
-        cpuinfos[j] = cpuinfos[i];
-        cpuinfos[i] = temp;
+        cpuinfos[j] = cpuinfos[j+1];
+        cpuinfos[j+1] = temp;
       }
     }
   }
