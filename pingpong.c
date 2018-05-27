@@ -200,15 +200,15 @@ void print_CPU_info() {
 
 void bubble_sort_cpuinfos(Cpuinfo* cpuinfos, int n) {
   // Sort numa
-  for (int i = 0; i < n-1; ++i) {
-    for (int j = 0; j < n-i-1; ++j) {
-      if (cpuinfos[j].numa > cpuinfos[j+1].numa) {
-        Cpuinfo temp = cpuinfos[j];
-        cpuinfos[j] = cpuinfos[j+1];
-        cpuinfos[j+1] = temp;
-      }
-    }
-  }
+  // for (int i = 0; i < n-1; ++i) {
+  //   for (int j = 0; j < n-i-1; ++j) {
+  //     if (cpuinfos[j].numa > cpuinfos[j+1].numa) {
+  //       Cpuinfo temp = cpuinfos[j];
+  //       cpuinfos[j] = cpuinfos[j+1];
+  //       cpuinfos[j+1] = temp;
+  //     }
+  //   }
+  // }
 
   // Sort node
   for (int i = 0; i < n-1; ++i) {
