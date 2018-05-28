@@ -78,7 +78,7 @@ void all_to_all_pingpong() {
   MPI_Comm_group(MPI_COMM_WORLD, &world_group);
 
   // Run latency tests
-  double* timestamps = (double*)calloc(size*size, sizeof(double));
+  double* data = (double*)calloc(size*size, sizeof(double));
   for (int i = 0; i < size-1; ++i) {
     for (int j = i+1; j < size; ++j) {
       // Rank i and j are the candidates
@@ -97,9 +97,9 @@ void all_to_all_pingpong() {
 
         // i and j runs the benchmark
         if (rank == i) {
-          timestamps[i*size+j] = time_pingpong(i, j, TS_TESTS, 1, pair_comm);
+          data[i*size+j] = time_pingpong(i, j, TS_TESTS, 1, pair_comm);
         } else if (rank == j) {
-          timestamps[j*size+i] = time_pingpong(i, j, TS_TESTS, 1, pair_comm);
+          data[j*size+i] = time_pingpong(i, j, TS_TESTS, 1, pair_comm);
         }
 
         MPI_Group_free(&pair_group);
@@ -108,13 +108,13 @@ void all_to_all_pingpong() {
     }
   }
 
-  // Collect timestamps on rank 0
+  // Collect data on rank 0
   if (rank == 0) {
     for (int r = 1; r < size; ++r) {
-        MPI_Recv(&timestamps[r*size], size, MPI_DOUBLE, r, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Recv(&data[r*size], size, MPI_DOUBLE, r, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     }
   } else {
-    MPI_Send(&timestamps[rank*size], size, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
+    MPI_Send(&data[rank*size], size, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
   }
 
   // Print header row
@@ -126,8 +126,8 @@ void all_to_all_pingpong() {
     printf("\n");
   }
 
-  // Print timestamps. timestamps sharing node is grouped together,
-  // and within that group, timestamps sharing sockets are grouped
+  // Print data. data sharing node is grouped together,
+  // and within that group, data sharing sockets are grouped (optional)
   // together
   if (rank == 0) {
     for (int i = 0; i < size; ++i) {
@@ -135,14 +135,14 @@ void all_to_all_pingpong() {
       printf("%02d;", cpuinfos[i].rank);
       for (int j = 0; j < size; ++j) {
         // cpuinfo[i].rank is used for node/socket grouping.
-        printf("%e;", timestamps[cpuinfos[i].rank*size+cpuinfos[j].rank]);
+        printf("%e;", data[cpuinfos[i].rank*size+cpuinfos[j].rank]);
       }
       printf("\n");
     }
   }
 
   MPI_Group_free(&world_group);
-  free(timestamps);
+  free(data);
 }
 
 
