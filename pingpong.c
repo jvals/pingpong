@@ -72,7 +72,7 @@ time_pingpong ( int source, int peer, int n_tests, int msg_size, MPI_Comm pair_c
     return (end-start)/(2.0*n_tests*msg_size);
 }
 
-void all_to_all_pingpong() {
+void all_to_all_pingpong(int n_tests, int msg_size) {
   // Create mpi group from comm_world
   MPI_Group world_group;
   MPI_Comm_group(MPI_COMM_WORLD, &world_group);
@@ -97,9 +97,9 @@ void all_to_all_pingpong() {
 
         // i and j runs the benchmark
         if (rank == i) {
-          data[i*size+j] = time_pingpong(i, j, TS_TESTS, 1, pair_comm);
+          data[i*size+j] = time_pingpong(i, j, n_tests, msg_size, pair_comm);
         } else if (rank == j) {
-          data[j*size+i] = time_pingpong(i, j, TS_TESTS, 1, pair_comm);
+          data[j*size+i] = time_pingpong(i, j, n_tests, msg_size, pair_comm);
         }
 
         MPI_Group_free(&pair_group);
@@ -275,7 +275,9 @@ main ( int argc, char **argv )
     // beta_inv = time_pingpong ( rank, peer, BETA_TESTS, MSG_SIZE );
     // printf ( "(%02d <-> %02d) b^-1 =~ %e [s/byte]\n", rank, peer, beta_inv );
 
-    all_to_all_pingpong();
+    all_to_all_pingpong(TS_TESTS, 1);
+    printf("========================================\n");
+    all_to_all_pingpong(BETA_TESTS, MSG_SIZE);
 
     if (rank == 0) {
       free(cpuinfos);
