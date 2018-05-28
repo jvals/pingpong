@@ -9,6 +9,7 @@
 
 
 cd ${SLURM_SUBMIT_DIR}
-module load intel
+
+. environment.sh idun
 make
 time srun --mpi=pmi2 ./pingpong
