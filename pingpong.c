@@ -92,7 +92,7 @@ void all_to_all_pingpong(int n_tests, int msg_size) {
         // Assert that the communicator is not null
         if (MPI_COMM_NULL == pair_comm) {
           fprintf(stderr, "pair_comm was null\n");
-          exit(1);
+          MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
         }
 
         // i and j runs the benchmark
