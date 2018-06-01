@@ -5,7 +5,7 @@
 #include <unistd.h>
 #include <sched.h>
 #include <sys/syscall.h>
-
+#include <sched.h>
 
 #define _GNU_SOURCE
 
@@ -13,8 +13,8 @@
 #define TS_TESTS 10000
 
 // 10 tests of 64 MB for bandwidth estimate
-#define BETA_TESTS 100
-#define MSG_SIZE 1024*1024*64
+#define BETA_TESTS 25
+#define MSG_SIZE 1024*1024*32
 
 int size, rank;
 
@@ -181,7 +181,8 @@ void all_print_hostname() {
 }
 
 void collect_CPU_info() {
-  syscall(SYS_getcpu, &cpuinfo.core, &cpuinfo.numa, NULL);
+  // syscall(SYS_getcpu, &cpuinfo.core, &cpuinfo.numa, NULL);
+  cpuinfo.core = sched_getcpu();
   if (rank == 0) {
     cpuinfos[0] = cpuinfo;
     for (int r = 1; r < size; ++r) {
