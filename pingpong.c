@@ -276,7 +276,8 @@ main ( int argc, char **argv )
     // printf ( "(%02d <-> %02d) b^-1 =~ %e [s/byte]\n", rank, peer, beta_inv );
 
     all_to_all_pingpong(TS_TESTS, 1);
-    printf("========================================\n");
+    MPI_Barrier(MPI_COMM_WORLD);
+    if (rank == 0) printf("========================================\n");
     all_to_all_pingpong(BETA_TESTS, MSG_SIZE);
 
     if (rank == 0) {
