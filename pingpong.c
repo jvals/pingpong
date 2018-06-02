@@ -6,6 +6,7 @@
 #include <sched.h>
 #include <sys/syscall.h>
 #include <sched.h>
+#include <time.h>
 
 #define _GNU_SOURCE
 
@@ -72,7 +73,32 @@ time_pingpong ( int source, int peer, int n_tests, int msg_size, MPI_Comm pair_c
     return (end-start)/(2.0*n_tests*msg_size);
 }
 
-void all_to_all_pingpong(int n_tests, int msg_size) {
+void write_data_int(const char* format, int data, const char* filename) {
+  FILE *out = fopen(filename, "a");
+  fprintf(out, format, data);
+  fclose(out);
+}
+
+void write_data_double(const char* format, double data, const char* filename) {
+  FILE *out = fopen(filename, "a");
+  fprintf(out, format, data);
+  fclose(out);
+}
+
+void write_data_newline(const char* filename) {
+  FILE *out = fopen(filename, "a");
+  fprintf(out, "\n");
+  fclose(out);
+}
+
+void write_data_string(const char* data, const char* filename) {
+  FILE *out = fopen(filename, "a");
+  fprintf(out, data);
+  fclose(out);
+}
+
+
+void all_to_all_pingpong(int n_tests, int msg_size, const char* filename) {
   // Create mpi group from comm_world
   MPI_Group world_group;
   MPI_Comm_group(MPI_COMM_WORLD, &world_group);
@@ -119,11 +145,14 @@ void all_to_all_pingpong(int n_tests, int msg_size) {
 
   // Print header row
   if (rank == 0) {
-    printf("xx;");
+    // printf("xx;");
+    write_data_string("xx;", filename);
     for (int r = 0; r < size; ++r) {
-      printf("%02d;", cpuinfos[r].rank);
+      // printf("%02d;", cpuinfos[r].rank);
+      write_data_int("%02d;", cpuinfos[r].rank, filename);
     }
-    printf("\n");
+    write_data_newline(filename);
+    // printf("\n");
   }
 
   // Print data. data sharing node is grouped together,
@@ -132,12 +161,15 @@ void all_to_all_pingpong(int n_tests, int msg_size) {
   if (rank == 0) {
     for (int i = 0; i < size; ++i) {
       // First column
-      printf("%02d;", cpuinfos[i].rank);
+      // printf("%02d;", cpuinfos[i].rank);
+      write_data_int("%02d;", cpuinfos[i].rank, filename);
       for (int j = 0; j < size; ++j) {
         // cpuinfo[i].rank is used for node/socket grouping.
-        printf("%e;", data[cpuinfos[i].rank*size+cpuinfos[j].rank]);
+        // printf("%e;", data[cpuinfos[i].rank*size+cpuinfos[j].rank]);
+        write_data_double("%e;", data[cpuinfos[i].rank*size+cpuinfos[j].rank], filename);
       }
-      printf("\n");
+      write_data_newline(filename);
+      // printf("\n");
     }
   }
 
@@ -240,14 +272,14 @@ main ( int argc, char **argv )
 
     if (rank == 0) print_CPU_info();
 
-    if (rank == 0) {
-      // Sort the cpuinfos array by socket and then by node.
-      bubble_sort_cpuinfos(cpuinfos, size);
-      printf("\n");
-      for (int r = 0; r < size; ++r) {
-        printf("RANK:%02d CPU:%02u NUMA:%02u NODE:%02d\n", cpuinfos[r].rank, cpuinfos[r].core, cpuinfos[r].numa, cpuinfos[r].node);
-      }
-    }
+    // if (rank == 0) {
+    //   // Sort the cpuinfos array by socket and then by node.
+    //   bubble_sort_cpuinfos(cpuinfos, size);
+    //   printf("\n");
+    //   for (int r = 0; r < size; ++r) {
+    //     printf("RANK:%02d CPU:%02u NUMA:%02u NODE:%02d\n", cpuinfos[r].rank, cpuinfos[r].core, cpuinfos[r].numa, cpuinfos[r].node);
+    //   }
+    // }
 
     if ( (size&1) )
     {
@@ -276,10 +308,20 @@ main ( int argc, char **argv )
     // beta_inv = time_pingpong ( rank, peer, BETA_TESTS, MSG_SIZE );
     // printf ( "(%02d <-> %02d) b^-1 =~ %e [s/byte]\n", rank, peer, beta_inv );
 
-    all_to_all_pingpong(TS_TESTS, 1);
+    char timetext[100];
+    time_t now = time(NULL);
+    struct tm* t = localtime(&now);
+    strftime(timetext, sizeof(timetext), "%Y%m%d_%H%M", t);
+
+    char filename[256];
+    sprintf(filename, "%s_latency", timetext);
+
+    all_to_all_pingpong(TS_TESTS, 1, filename);
     MPI_Barrier(MPI_COMM_WORLD);
     if (rank == 0) printf("========================================\n");
-    all_to_all_pingpong(BETA_TESTS, MSG_SIZE);
+
+    sprintf(filename, "%s_betainv", timetext);
+    all_to_all_pingpong(BETA_TESTS, MSG_SIZE, filename);
 
     if (rank == 0) {
       free(cpuinfos);
