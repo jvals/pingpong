@@ -11,5 +11,6 @@
 cd ${SLURM_SUBMIT_DIR}
 
 . environment.sh idun
+make clean
 make
 time srun --mpi=pmi2 ./pingpong
